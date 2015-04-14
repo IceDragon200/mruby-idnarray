@@ -3,14 +3,16 @@
 
 #include <stdlib.h>
 
+#ifndef NARRAY_ENABLE_64BIT
+#  define NARRAY_ENABLE_64BIT 0
+#endif
+
 #ifndef float32_t
   typedef float float32_t;
 #endif
 #ifndef float64_t
   typedef double float64_t;
 #endif
-
-#define NARRAY_ENABLE_64BIT 0
 
 enum NArrayContentType {
   NARRAY_INVALID = 0,

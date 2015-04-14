@@ -20,15 +20,18 @@ class NArray
   end
 
   alias :slice_raw :slice
-  # @overload slice(i)
-  #   @param [Integer] i
+  # @overload slice(index)
+  #   Retrieves an element from the NArray
+  #   @param [Integer] index
   #   @return [Numeric]
   # @overload slice(range)
+  #   Retrieves a range of elements from the NArray
   #   @param [Range] range
   #   @return [NArray]
-  # @overload slice(i, j)
-  #   @param [Integer] i
-  #   @param [Integer] j
+  # @overload slice(start, length)
+  #   Retrieves a range of elements from the NArray (from)
+  #   @param [Integer] start
+  #   @param [Integer] length
   #   @return [NArray]
   def slice(i, j = nil)
     if Range === i

@@ -313,6 +313,7 @@ narray_slice(mrb_state *mrb, mrb_value self)
 /* @class NArray
  * @method clear
  *   @return [self]
+ * Clear does not reset the size, it only fills the Array with 0s
  */
 static mrb_value
 narray_clear(mrb_state *mrb, mrb_value self)
