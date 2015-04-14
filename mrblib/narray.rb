@@ -49,4 +49,11 @@ class NArray
     end
   end
 
+  # @yieldparam [Array<Numeric>] num
+  def to_a
+    result = []
+    size.times { |i| result << self[i] }
+    result
+  end
+
 end
