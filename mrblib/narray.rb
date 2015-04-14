@@ -1,6 +1,10 @@
 class NArray
   include Enumerable
 
+  # @!attribute default
+  #   @return [Numeric]
+  attr_accessor :default
+
   alias :initialize_raw :initialize
   # @param [Integer] type  content type of the NArray
   # @param [Integer] size  number of elements in the NArray
@@ -10,6 +14,8 @@ class NArray
     initialize_raw(type, size)
     if block
       size.times { |i| self[i] = block.call(i) }
+    elsif @default != 0
+      size.times { |i| self[i] = @default }
     end
   end
 
