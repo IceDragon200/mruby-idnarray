@@ -62,4 +62,13 @@ class NArray
     result
   end
 
+  class << self
+    Type.constants.each do |constname|
+      name = constname.to_s.downcase
+      type = Type.const_get(constname)
+      define_method name do |size, *args, &block|
+        new(type, size, *args, &block)
+      end
+    end
+  end
 end
