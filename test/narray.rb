@@ -81,29 +81,41 @@ assert 'NArray convience methods' do
   n9 = NArray.float32(32)
 
   assert_equal NArray::Type::UINT8,   n1.type
+  assert_equal 1, n1.element_size
   assert_equal NArray::Type::INT8,    n5.type
+  assert_equal 1, n5.element_size
 
   assert_equal NArray::Type::UINT16,  n2.type
+  assert_equal 2, n2.element_size
+
   assert_equal NArray::Type::INT16,   n6.type
+  assert_equal 2, n6.element_size
 
   assert_equal NArray::Type::UINT32,  n3.type
+  assert_equal 4, n3.element_size
+
   assert_equal NArray::Type::INT32,   n7.type
+  assert_equal 4, n7.element_size
 
   assert_equal NArray::Type::FLOAT32, n9.type
+  assert_equal 4, n9.element_size
 
   if NArray::Type.const_defined?(:UINT64)
     n4 = NArray.float64(32)
     assert_equal NArray::Type::UINT64, n10.type
+    assert_equal 8, n4.element_size
   end
 
   if NArray::Type.const_defined?(:INT64)
     n8 = NArray.float64(32)
     assert_equal NArray::Type::INT64, n10.type
+    assert_equal 8, n8.element_size
   end
 
   if NArray::Type.const_defined?(:FLOAT64)
     n10 = NArray.float64(32)
     assert_equal NArray::Type::FLOAT64, n10.type
+    assert_equal 8, n10.element_size
   end
   true
 end
