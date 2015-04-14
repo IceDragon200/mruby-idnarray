@@ -11,8 +11,30 @@ class NArray
     end
   end
 
-  def [](index)
-    aget(index) || @default
+  alias :slice_raw :slice
+  # @overload slice(i)
+  #   @param [Integer] i
+  #   @return [Numeric]
+  # @overload slice(range)
+  #   @param [Range] range
+  #   @return [NArray]
+  # @overload slice(i, j)
+  #   @param [Integer] i
+  #   @param [Integer] j
+  #   @return [NArray]
+  def slice(i, j = nil)
+    if Range === i
+      slice_raw(i.start, i.end + (i.exclude_end? ? 0 : 1))
+    elsif j
+      slice_raw(i, j)
+    else
+      aget(index) || @default
+    end
+  end
+
+  # @param [Integer] index
+  def [](*args)
+    slice(*args)
   end
 
   alias :[]= :aset

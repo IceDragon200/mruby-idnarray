@@ -49,9 +49,9 @@ public:
   NArray(enum NArrayContentType _type, int _size);
   ~NArray();
 
-  bool Resize(int new_size);
   bool Aget(int index, void *target);
   bool Aset(int index, void *val);
+  NArray* Slice(int start, int length);
 private:
   bool AllocData();
   bool FreeData();
@@ -101,7 +101,6 @@ NArray::NArray(enum NArrayContentType _type, int _size)
   data = NULL;
   type = _type;
   size = _size;
-  AllocData();
 }
 
 NArray::~NArray()
@@ -250,6 +249,17 @@ bool NArray::Aset(int index, void *value)
   return true;
 }
 
+NArray*
+NArray::Slice(int start, int length)
+{
+  if (start < 0 || (start + length) < size) {
+    return NULL;
+  }
+  NArray *result = new NArray(type, length);
+  memcpy(result->data, data + (start * element_size), result->memsize);
+  return result;
+}
+
 static struct RClass *narray_class;
 static struct RClass *narray_type_module;
 
@@ -263,10 +273,52 @@ narray_free(mrb_state *mrb, void *ptr)
 
 struct mrb_data_type mrb_narray_type = { "NArray", narray_free };
 
+static void
+narray_cleanup(mrb_state *mrb, mrb_value self)
+{
+  if (DATA_PTR(self)) {
+    narray_free(mrb, DATA_PTR(self));
+    DATA_PTR(self) = NULL;
+    DATA_TYPE(self) = NULL;
+  }
+}
+
 static NArray*
 get_narray(mrb_state *mrb, mrb_value self)
 {
   return (NArray*)mrb_data_get_ptr(mrb, self, &mrb_narray_type);
+}
+
+static bool
+narray_initialize_m(mrb_state *mrb, mrb_value self, enum NArrayContentType type, int size)
+{
+  narray_cleanup(mrb, self);
+  if (size < 0) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "given size is too small");
+    return false;
+  } else if (size == 0) {
+    return false;
+  }
+  if (type <= NARRAY_INVALID || type >= NARRAY_CONTENT_TYPE_COUNT) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "Invalid NArray type.");
+    /* if it somehow manages to get past here */
+    return false;
+  }
+
+  narray = new NArray((enum NArrayContentType)type, size);
+  mrb_data_init(self, narray, &mrb_narray_type);
+
+  return true;
+}
+
+static mrb_value
+mrb_narray_value(mrb_state *mrb, NArray *narray)
+{
+  mrb_value argv[2] = {mrb_fixnum_value(NARRAY_INVALID), mrb_fixnum_value(0)};
+  mrb_value obj = mrb_obj_new(mrb, narray_class, 2, argv);
+  narray_cleanup(mrb, obj);
+  mrb_data_init(obj, narray, &mrb_narray_type);
+  return obj;
 }
 
 /* @class NArray
@@ -279,19 +331,13 @@ narray_initialize(mrb_state *mrb, mrb_value self)
 {
   mrb_int type;
   mrb_int size;
-  mrb_int dfault = 0;
   NArray *narray = NULL;
-  mrb_get_args(mrb, "ii|i", &type, &size, &dfault);
-
-  if (type <= NARRAY_INVALID || type >= NARRAY_CONTENT_TYPE_COUNT) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "Invalid NArray type.");
-    /* if it somehow manages to get past here */
-    return mrb_nil_value();
+  mrb_get_args(mrb, "ii", &type, &size);
+  if (narray_initialize_m(mrb, self, (enum NArrayContentType)type, size)) {
+    // new Narrays are always dirty, this is to avoid clearing an Array which
+    // will have its data replaced immediately.
+    get_narray(mrb, self)->AllocData();
   }
-
-  narray = new NArray((enum NArrayContentType)type, size);
-  mrb_data_init(self, narray, &mrb_narray_type);
-  return self;
 }
 
 #define MAYBE_RETURN_NIL(__statement__) if (!(__statement__)) return mrb_nil_value()
@@ -477,6 +523,22 @@ narray_element_size(mrb_state *mrb, mrb_value self)
   return mrb_fixnum_value(get_narray(mrb, self)->element_size);
 }
 
+static mrb_value
+narray_slice(mrb_state *mrb, mrb_value self)
+{
+  NArray *narray = get_narray(mrb, self);
+  NArray *sliced = NULL;
+  mrb_int start;
+  mrb_int length;
+  mrb_get_args(mrb, "ii", &start, &length);
+  sliced = narray->Slice(start, length);
+  if (sliced) {
+    return mrb_narray_value(mrb, sliced);
+  } else {
+    mrb_raise(E_RUNTIME_ERROR, "slice failed, start and or length out of bounds.")
+  }
+}
+
 extern "C" void
 mrb_mruby_idnarray_gem_init(mrb_state* mrb)
 {
@@ -491,6 +553,7 @@ mrb_mruby_idnarray_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, narray_class, "size",         narray_size,         MRB_ARGS_NONE());
   mrb_define_method(mrb, narray_class, "memsize",      narray_memsize,      MRB_ARGS_NONE());
   mrb_define_method(mrb, narray_class, "element_size", narray_element_size, MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "slice",        narray_slice,        MRB_ARGS_REQ(2));
 
   mrb_define_const(mrb, narray_type_module, "UINT8", mrb_fixnum_value(NARRAY_UINT8));
   mrb_define_const(mrb, narray_type_module, "UINT16", mrb_fixnum_value(NARRAY_UINT16));
