@@ -437,6 +437,46 @@ narray_aset(mrb_state *mrb, mrb_value self)
   return mrb_true_value();
 }
 
+/* @class NArray
+ * @method type
+ #   @return [Integer]
+ */
+static mrb_value
+narray_type(mrb_state *mrb, mrb_value self)
+{
+  return mrb_fixnum_value(get_narray(mrb, self)->type);
+}
+
+/* @class NArray
+ * @method size
+ #   @return [Integer]
+ */
+static mrb_value
+narray_size(mrb_state *mrb, mrb_value self)
+{
+  return mrb_fixnum_value(get_narray(mrb, self)->size);
+}
+
+/* @class NArray
+ * @method memsize
+ #   @return [Integer]
+ */
+static mrb_value
+narray_memsize(mrb_state *mrb, mrb_value self)
+{
+  return mrb_fixnum_value(get_narray(mrb, self)->memsize);
+}
+
+/* @class NArray
+ * @method element_size
+ #   @return [Integer]
+ */
+static mrb_value
+narray_element_size(mrb_state *mrb, mrb_value self)
+{
+  return mrb_fixnum_value(get_narray(mrb, self)->element_size);
+}
+
 extern "C" void
 mrb_mruby_idnarray_gem_init(mrb_state* mrb)
 {
@@ -444,9 +484,13 @@ mrb_mruby_idnarray_gem_init(mrb_state* mrb)
   narray_type_module = mrb_define_module_under(mrb, narray_class, "Type");
   MRB_SET_INSTANCE_TT(narray_class, MRB_TT_DATA);
 
-  mrb_define_method(mrb, narray_class, "initialize", narray_initialize, MRB_ARGS_ARG(2, 1));
-  mrb_define_method(mrb, narray_class, "aget",       narray_aget,       MRB_ARGS_REQ(1));
-  mrb_define_method(mrb, narray_class, "aset",       narray_aset,       MRB_ARGS_REQ(2));
+  mrb_define_method(mrb, narray_class, "initialize",   narray_initialize,   MRB_ARGS_ARG(2, 1));
+  mrb_define_method(mrb, narray_class, "aget",         narray_aget,         MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, narray_class, "aset",         narray_aset,         MRB_ARGS_REQ(2));
+  mrb_define_method(mrb, narray_class, "type",         narray_type,         MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "size",         narray_size,         MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "memsize",      narray_memsize,      MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "element_size", narray_element_size, MRB_ARGS_NONE());
 
   mrb_define_const(mrb, narray_type_module, "UINT8", mrb_fixnum_value(NARRAY_UINT8));
   mrb_define_const(mrb, narray_type_module, "UINT16", mrb_fixnum_value(NARRAY_UINT16));
