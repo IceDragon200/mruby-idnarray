@@ -32,15 +32,16 @@ class NArray
   #   @return [NArray]
   def slice(i, j = nil)
     if Range === i
-      slice_raw(i.start, i.end + (i.exclude_end? ? 0 : 1))
+      j = (i.end - i.begin) + (i.exclude_end? ? 0 : 1)
+      slice_raw(i.begin, j)
     elsif j
       slice_raw(i, j)
     else
-      aget(index) || @default
+      aget(i) || @default
     end
   end
 
-  # @param [Integer] index
+  # (see #slice)
   def [](*args)
     slice(*args)
   end

@@ -38,11 +38,11 @@ enum NArrayContentType {
 
 struct NArray {
 public:
-  NArrayContentType type; // type of content
-  size_t size;         // number of elements in the Array
-  size_t element_size; //
-  size_t memsize;      // actually allocated size
-  void *data;       // pointer to the data
+  enum NArrayContentType type; // type of content
+  size_t size;                 // number of elements in the Array
+  size_t element_size;         // size of 1 element in the array
+  size_t memsize;              // actually allocated size
+  void *data;                  // pointer to the data
 
   static size_t CalcContentTypeSize(enum NArrayContentType type);
 
@@ -52,13 +52,15 @@ public:
   bool Aget(int index, void *target);
   bool Aset(int index, void *val);
   NArray* Slice(int start, int length);
+  NArray* Copy();
+  // @api
+  bool ClearData();
 private:
   bool AllocData();
   bool FreeData();
   void RecalculateSizes();
 };
 
-#define NArrayReflectGetType(type)
 size_t
 NArray::CalcContentTypeSize(enum NArrayContentType type)
 {
@@ -101,6 +103,7 @@ NArray::NArray(enum NArrayContentType _type, int _size)
   data = NULL;
   type = _type;
   size = _size;
+  AllocData();
 }
 
 NArray::~NArray()
@@ -122,12 +125,18 @@ NArray::AllocData()
   RecalculateSizes();
   if (memsize) {
     data = malloc(memsize);
-    memset(data, 0, memsize);
     return true;
   } else {
     // TODO handle 0 size Array
     return false;
   }
+}
+
+bool
+NArray::ClearData()
+{
+  memset(data, 0, memsize);
+  return true;
 }
 
 bool
@@ -252,11 +261,62 @@ bool NArray::Aset(int index, void *value)
 NArray*
 NArray::Slice(int start, int length)
 {
-  if (start < 0 || (start + length) < size) {
+  if (start < 0 || ((int)size < (start + length))) {
     return NULL;
   }
   NArray *result = new NArray(type, length);
-  memcpy(result->data, data + (start * element_size), result->memsize);
+#define DO_COPY(__type__) memcpy(result->data, &(((__type__*)data)[start]), result->memsize)
+  switch (type) {
+    case NARRAY_UINT8: {
+      DO_COPY(uint8_t);
+    } break;
+    case NARRAY_UINT16: {
+      DO_COPY(uint16_t);
+    } break;
+    case NARRAY_UINT32: {
+      DO_COPY(uint32_t);
+    } break;
+#if NARRAY_ENABLE_64BIT
+    case NARRAY_UINT64: {
+      DO_COPY(uint64_t);
+    } break;
+#endif
+    case NARRAY_INT8: {
+      DO_COPY(int8_t);
+    } break;
+    case NARRAY_INT16: {
+      DO_COPY(int16_t);
+    } break;
+    case NARRAY_INT32: {
+      DO_COPY(int32_t);
+    } break;
+#if NARRAY_ENABLE_64BIT
+    case NARRAY_INT64: {
+      DO_COPY(int64_t);
+    } break;
+#endif
+    case NARRAY_FLOAT32: {
+      DO_COPY(float32_t);
+    } break;
+#if NARRAY_ENABLE_64BIT
+    case NARRAY_FLOAT64: {
+      DO_COPY(float64_t);
+    } break;
+#endif
+    default: {
+      delete result;
+      return NULL;
+    }
+  }
+  return result;
+}
+
+NArray*
+NArray::Copy()
+{
+  NArray *result = new NArray(type, size);
+  result->ClearData();
+  memcpy(result->data, data, memsize);
   return result;
 }
 
@@ -267,7 +327,8 @@ static void
 narray_free(mrb_state *mrb, void *ptr)
 {
   if (ptr) {
-    mrb_free(mrb, ptr);
+    NArray *narray = (NArray*)ptr;
+    delete narray;
   }
 }
 
@@ -292,6 +353,7 @@ get_narray(mrb_state *mrb, mrb_value self)
 static bool
 narray_initialize_m(mrb_state *mrb, mrb_value self, enum NArrayContentType type, int size)
 {
+  NArray *narray = NULL;
   narray_cleanup(mrb, self);
   if (size < 0) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "given size is too small");
@@ -331,13 +393,27 @@ narray_initialize(mrb_state *mrb, mrb_value self)
 {
   mrb_int type;
   mrb_int size;
-  NArray *narray = NULL;
   mrb_get_args(mrb, "ii", &type, &size);
   if (narray_initialize_m(mrb, self, (enum NArrayContentType)type, size)) {
     // new Narrays are always dirty, this is to avoid clearing an Array which
     // will have its data replaced immediately.
-    get_narray(mrb, self)->AllocData();
+    get_narray(mrb, self)->ClearData();
   }
+  return self;
+}
+
+/* @class NArray
+ * @method initialize_copy(other)
+ *   @param [NArray]
+ */
+static mrb_value
+narray_initialize_copy(mrb_state *mrb, mrb_value self)
+{
+  NArray *other;
+  mrb_get_args(mrb, "d", &other, &mrb_narray_type);
+  narray_cleanup(mrb, self);
+  mrb_data_init(self, other->Copy(), &mrb_narray_type);
+  return self;
 }
 
 #define MAYBE_RETURN_NIL(__statement__) if (!(__statement__)) return mrb_nil_value()
@@ -523,6 +599,12 @@ narray_element_size(mrb_state *mrb, mrb_value self)
   return mrb_fixnum_value(get_narray(mrb, self)->element_size);
 }
 
+/* @class NArray
+ * @method slice(start, length)
+ *   @param [Integer] start
+ *   @param [Integer] length
+ *   @return [NArray]
+ */
 static mrb_value
 narray_slice(mrb_state *mrb, mrb_value self)
 {
@@ -535,8 +617,21 @@ narray_slice(mrb_state *mrb, mrb_value self)
   if (sliced) {
     return mrb_narray_value(mrb, sliced);
   } else {
-    mrb_raise(E_RUNTIME_ERROR, "slice failed, start and or length out of bounds.")
+    mrb_raise(mrb, E_RUNTIME_ERROR, "slice failed, start and or length out of bounds.");
   }
+  // not suppose to reach here.
+  return mrb_nil_value();
+}
+
+/* @class NArray
+ * @method clear
+ *   @return [self]
+ */
+static mrb_value
+narray_clear(mrb_state *mrb, mrb_value self)
+{
+  get_narray(mrb, self)->ClearData();
+  return self;
 }
 
 extern "C" void
@@ -546,22 +641,24 @@ mrb_mruby_idnarray_gem_init(mrb_state* mrb)
   narray_type_module = mrb_define_module_under(mrb, narray_class, "Type");
   MRB_SET_INSTANCE_TT(narray_class, MRB_TT_DATA);
 
-  mrb_define_method(mrb, narray_class, "initialize",   narray_initialize,   MRB_ARGS_ARG(2, 1));
-  mrb_define_method(mrb, narray_class, "aget",         narray_aget,         MRB_ARGS_REQ(1));
-  mrb_define_method(mrb, narray_class, "aset",         narray_aset,         MRB_ARGS_REQ(2));
-  mrb_define_method(mrb, narray_class, "type",         narray_type,         MRB_ARGS_NONE());
-  mrb_define_method(mrb, narray_class, "size",         narray_size,         MRB_ARGS_NONE());
-  mrb_define_method(mrb, narray_class, "memsize",      narray_memsize,      MRB_ARGS_NONE());
-  mrb_define_method(mrb, narray_class, "element_size", narray_element_size, MRB_ARGS_NONE());
-  mrb_define_method(mrb, narray_class, "slice",        narray_slice,        MRB_ARGS_REQ(2));
+  mrb_define_method(mrb, narray_class, "initialize",      narray_initialize,      MRB_ARGS_ARG(2, 1));
+  mrb_define_method(mrb, narray_class, "initialize_copy", narray_initialize_copy, MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, narray_class, "aget",            narray_aget,            MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, narray_class, "aset",            narray_aset,            MRB_ARGS_REQ(2));
+  mrb_define_method(mrb, narray_class, "type",            narray_type,            MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "size",            narray_size,            MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "memsize",         narray_memsize,         MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "element_size",    narray_element_size,    MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "slice",           narray_slice,           MRB_ARGS_REQ(2));
+  mrb_define_method(mrb, narray_class, "clear",           narray_clear,           MRB_ARGS_NONE());
 
-  mrb_define_const(mrb, narray_type_module, "UINT8", mrb_fixnum_value(NARRAY_UINT8));
+  mrb_define_const(mrb, narray_type_module, "UINT8",  mrb_fixnum_value(NARRAY_UINT8));
   mrb_define_const(mrb, narray_type_module, "UINT16", mrb_fixnum_value(NARRAY_UINT16));
   mrb_define_const(mrb, narray_type_module, "UINT32", mrb_fixnum_value(NARRAY_UINT32));
 #if NARRAY_ENABLE_64BIT
   mrb_define_const(mrb, narray_type_module, "UINT64", mrb_fixnum_value(NARRAY_UINT64));
 #endif
-  mrb_define_const(mrb, narray_type_module, "INT8", mrb_fixnum_value(NARRAY_INT8));
+  mrb_define_const(mrb, narray_type_module, "INT8",  mrb_fixnum_value(NARRAY_INT8));
   mrb_define_const(mrb, narray_type_module, "INT16", mrb_fixnum_value(NARRAY_INT16));
   mrb_define_const(mrb, narray_type_module, "INT32", mrb_fixnum_value(NARRAY_INT32));
 #if NARRAY_ENABLE_64BIT
