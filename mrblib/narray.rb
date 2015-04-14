@@ -1,4 +1,6 @@
 class NArray
+  include Enumerable
+
   alias :initialize_raw :initialize
   # @param [Integer] type  content type of the NArray
   # @param [Integer] size  number of elements in the NArray
@@ -38,4 +40,13 @@ class NArray
   end
 
   alias :[]= :aset
+
+  # @yieldparam [Numeric] num
+  def each
+    return to_enum :each unless block_given?
+    size.times do |i|
+      yield self[i]
+    end
+  end
+
 end
