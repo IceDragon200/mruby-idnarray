@@ -48,7 +48,10 @@ class NArray
 
   alias :[]= :aset
 
-  # @yieldparam [Numeric] num
+  # @overload each
+  #   @return [Enumerator]
+  # @overload each { |element| }
+  #   @yieldparam [Numeric] num
   def each
     return to_enum :each unless block_given?
     size.times do |i|
@@ -56,7 +59,9 @@ class NArray
     end
   end
 
-  # @yieldparam [Array<Numeric>] num
+  # Converts the NArray to a ruby Array
+  #
+  # @return [Array<Numeric>]
   def to_a
     result = []
     size.times { |i| result << self[i] }
@@ -64,6 +69,7 @@ class NArray
   end
 
   class << self
+    # generates helper methods based on the types available
     Type.constants.each do |constname|
       name = constname.to_s.downcase
       type = Type.const_get(constname)
