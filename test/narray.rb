@@ -68,3 +68,42 @@ assert 'NArray#slice' do
     assert_equal narray[i + 50], r3[i], "slice(range) expected element #{i} to equal #{narray[i + 50]}"
   end
 end
+
+assert 'NArray convience methods' do
+  n1 = NArray.uint8(32)
+  n2 = NArray.uint16(32)
+  n3 = NArray.uint32(32)
+
+  n5 = NArray.int8(32)
+  n6 = NArray.int16(32)
+  n7 = NArray.int32(32)
+
+  n9 = NArray.float32(32)
+
+  assert_equal NArray::Type::UINT8,   n1.type
+  assert_equal NArray::Type::INT8,    n5.type
+
+  assert_equal NArray::Type::UINT16,  n2.type
+  assert_equal NArray::Type::INT16,   n6.type
+
+  assert_equal NArray::Type::UINT32,  n3.type
+  assert_equal NArray::Type::INT32,   n7.type
+
+  assert_equal NArray::Type::FLOAT32, n9.type
+
+  if NArray::Type.const_defined?(:UINT64)
+    n4 = NArray.float64(32)
+    assert_equal NArray::Type::UINT64, n10.type
+  end
+
+  if NArray::Type.const_defined?(:INT64)
+    n8 = NArray.float64(32)
+    assert_equal NArray::Type::INT64, n10.type
+  end
+
+  if NArray::Type.const_defined?(:FLOAT64)
+    n10 = NArray.float64(32)
+    assert_equal NArray::Type::FLOAT64, n10.type
+  end
+  true
+end
