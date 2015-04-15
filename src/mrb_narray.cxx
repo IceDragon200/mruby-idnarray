@@ -2,8 +2,7 @@
 #include <mruby/class.h>
 #include <mruby/data.h>
 #include <mruby/numeric.h>
-#include "idnarray.hxx"
-#include "mrb/idnarray.h"
+#include "mrb/idnarray/narray.hxx"
 
 static struct RClass *narray_class;
 static struct RClass *narray_type_module;
@@ -17,9 +16,9 @@ narray_free(mrb_state *mrb, void *ptr)
   }
 }
 
-extern "C" const struct mrb_data_type mrb_narray_type = { "NArray", narray_free };
+extern "C" const struct mrb_data_type mrb_idnarray_type = { "NArray", narray_free };
 
-static void
+static inline void
 narray_cleanup(mrb_state *mrb, mrb_value self)
 {
   if (DATA_PTR(self)) {
@@ -29,10 +28,10 @@ narray_cleanup(mrb_state *mrb, mrb_value self)
   }
 }
 
-static NArray*
+static inline NArray*
 get_narray(mrb_state *mrb, mrb_value self)
 {
-  return (NArray*)mrb_data_get_ptr(mrb, self, &mrb_narray_type);
+  return (NArray*)mrb_data_get_ptr(mrb, self, &mrb_idnarray_type);
 }
 
 static bool
@@ -53,7 +52,7 @@ narray_initialize_m(mrb_state *mrb, mrb_value self, enum NArrayContentType type,
   }
 
   narray = new NArray((enum NArrayContentType)type, size);
-  mrb_data_init(self, narray, &mrb_narray_type);
+  mrb_data_init(self, narray, &mrb_idnarray_type);
 
   return true;
 }
@@ -66,8 +65,31 @@ mrb_narray_value(mrb_state *mrb, NArray *narray)
   mrb_value argv[2] = {mrb_fixnum_value(NARRAY_INVALID), mrb_fixnum_value(0)};
   mrb_value obj = mrb_obj_new(mrb, narray_class, 2, argv);
   narray_cleanup(mrb, obj);
-  mrb_data_init(obj, narray, &mrb_narray_type);
+  mrb_data_init(obj, narray, &mrb_idnarray_type);
   return obj;
+}
+
+/*
+ * Checks if the NArray type is the one that is expected.
+ * @raise TypeError
+ */
+extern "C" void
+mrb_narray_check_type(mrb_state *mrb, const NArray *narray, enum NArrayContentType type)
+{
+  assert(narray);
+  if (narray->type != type) {
+    /* TODO: print out the current narray type and the expected */
+    mrb_raise(mrb, E_TYPE_ERROR, "Wrong NArray type.");
+  }
+}
+
+/* Creates a new mruby NArray.
+ * @return [NArray]
+ */
+extern "C" mrb_value
+mrb_narray_new(mrb_state *mrb, enum NArrayContentType type, int size)
+{
+  return mrb_narray_value(mrb, new NArray(type, size));
 }
 
 /* @class NArray
@@ -97,9 +119,9 @@ static mrb_value
 narray_initialize_copy(mrb_state *mrb, mrb_value self)
 {
   NArray *other;
-  mrb_get_args(mrb, "d", &other, &mrb_narray_type);
+  mrb_get_args(mrb, "d", &other, &mrb_idnarray_type);
   narray_cleanup(mrb, self);
-  mrb_data_init(self, other->Copy(), &mrb_narray_type);
+  mrb_data_init(self, other->Copy(), &mrb_idnarray_type);
   return self;
 }
 
@@ -323,7 +345,7 @@ narray_clear(mrb_state *mrb, mrb_value self)
 }
 
 extern "C" void
-mrb_mruby_idnarray_gem_init(mrb_state* mrb)
+mrb_mruby_idnarray_gem_init(mrb_state *mrb)
 {
   narray_class = mrb_define_class(mrb, "NArray", mrb->object_class);
   narray_type_module = mrb_define_module_under(mrb, narray_class, "Type");
@@ -359,6 +381,6 @@ mrb_mruby_idnarray_gem_init(mrb_state* mrb)
 }
 
 extern "C" void
-mrb_mruby_idnarray_gem_final(mrb_state* mrb)
+mrb_mruby_idnarray_gem_final(mrb_state *mrb)
 {
 }
