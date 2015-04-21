@@ -78,3 +78,9 @@ NArray.uint64 size
 NArray.int64 size
 NArray.float64 size
 ```
+
+## Docs
+```shell
+# to generate docs locally
+rake docs
+```
