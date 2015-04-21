@@ -351,7 +351,7 @@ mrb_mruby_idnarray_gem_init(mrb_state *mrb)
   narray_type_module = mrb_define_module_under(mrb, narray_class, "Type");
   MRB_SET_INSTANCE_TT(narray_class, MRB_TT_DATA);
 
-  mrb_define_method(mrb, narray_class, "initialize",      narray_initialize,      MRB_ARGS_ARG(2, 1));
+  mrb_define_method(mrb, narray_class, "initialize",      narray_initialize,      MRB_ARGS_REQ(2));
   mrb_define_method(mrb, narray_class, "initialize_copy", narray_initialize_copy, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, narray_class, "aget",            narray_aget,            MRB_ARGS_REQ(1));
   mrb_define_method(mrb, narray_class, "aset",            narray_aset,            MRB_ARGS_REQ(2));
@@ -362,6 +362,7 @@ mrb_mruby_idnarray_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, narray_class, "slice",           narray_slice,           MRB_ARGS_REQ(2));
   mrb_define_method(mrb, narray_class, "clear",           narray_clear,           MRB_ARGS_NONE());
 
+  mrb_define_const(mrb, narray_type_module, "INVALID",  mrb_fixnum_value(NARRAY_INVALID));
   mrb_define_const(mrb, narray_type_module, "UINT8",  mrb_fixnum_value(NARRAY_UINT8));
   mrb_define_const(mrb, narray_type_module, "UINT16", mrb_fixnum_value(NARRAY_UINT16));
   mrb_define_const(mrb, narray_type_module, "UINT32", mrb_fixnum_value(NARRAY_UINT32));
