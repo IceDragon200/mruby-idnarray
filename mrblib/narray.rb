@@ -71,6 +71,14 @@ class NArray
     result
   end
 
+  # Creates a new resized copy of the NArray
+  #
+  # @param [Integer] size
+  # @return [NArray]
+  def resize(size)
+    dup.resize!(size)
+  end
+
   class << self
     # generates helper methods based on the types available
     Type.constants.each do |constname|

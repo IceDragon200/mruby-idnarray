@@ -53,6 +53,7 @@ public:
 
   bool Aget(int index, void *target);
   bool Aset(int index, void *val);
+  void Resize(size_t newsize);
   NArray* Slice(int start, int length);
   NArray* Copy();
   bool ClearData();

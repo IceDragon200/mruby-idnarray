@@ -263,3 +263,20 @@ NArray::Copy()
   memcpy(result->data, data, memsize);
   return result;
 }
+
+void
+NArray::Resize(size_t newsize)
+{
+  const size_t oldmemsize = memsize;
+  void *olddata = data;
+  data = NULL;
+  size = newsize;
+  AllocData();
+  ClearData();
+  if (olddata != NULL)
+  {
+    const size_t copymemsize = oldmemsize < memsize ? oldmemsize : memsize;
+    memcpy(data, olddata, copymemsize);
+    free(olddata);
+  }
+}

@@ -344,6 +344,27 @@ narray_clear(mrb_state *mrb, mrb_value self)
   return self;
 }
 
+/**
+ * @class NArray
+ * @method resize(size)
+ *   @param [Integer] size
+ *   @return [self]
+ * Resizes the internal array, copies any old data to the newly resized data.
+ */
+static mrb_value
+narray_resize(mrb_state *mrb, mrb_value self)
+{
+  mrb_int size;
+  mrb_get_args(mrb, "i", &size);
+  if (size <= 0)
+  {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "Invalid size!");
+    return mrb_nil_value();
+  }
+  get_narray(mrb, self)->Resize(size);
+  return self;
+}
+
 extern "C" void
 mrb_mruby_idnarray_gem_init(mrb_state *mrb)
 {
@@ -361,6 +382,7 @@ mrb_mruby_idnarray_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, narray_class, "element_size",    narray_element_size,    MRB_ARGS_NONE());
   mrb_define_method(mrb, narray_class, "slice",           narray_slice,           MRB_ARGS_REQ(2));
   mrb_define_method(mrb, narray_class, "clear",           narray_clear,           MRB_ARGS_NONE());
+  mrb_define_method(mrb, narray_class, "resize!",         narray_resize,          MRB_ARGS_REQ(1));
 
   mrb_define_const(mrb, narray_type_module, "INVALID",  mrb_fixnum_value(NARRAY_INVALID));
   mrb_define_const(mrb, narray_type_module, "UINT8",  mrb_fixnum_value(NARRAY_UINT8));

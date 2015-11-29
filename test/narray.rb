@@ -48,6 +48,48 @@ assert 'NArray#initialize_copy' do
   end
 end
 
+assert 'NArray#[]/=' do
+  narray = NArray.new NArray::Type::UINT8, 10
+
+  assert_equal 0, narray[0]
+  narray[0] = 1
+  assert_equal 1, narray[0]
+  assert_equal 0, narray[1]
+  assert_equal 0, narray[10]
+end
+
+assert 'NArray#to_a' do
+  narray = NArray.new NArray::Type::UINT8, 10
+
+  assert_equal [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], narray.to_a
+end
+
+assert 'NArray#resize!' do
+  narray = NArray.new NArray::Type::UINT8, 10
+
+  assert_equal 10, narray.size
+  narray[0] = 1
+  narray[1] = 2
+
+  narray.resize! 20
+
+  assert_equal 20, narray.size
+
+  assert_equal 1, narray[0]
+  assert_equal 2, narray[1]
+  assert_equal 0, narray[10]
+  assert_equal 0, narray[11]
+end
+
+assert 'NArray#resize' do
+  narray = NArray.new NArray::Type::UINT8, 10
+
+  new_array = narray.resize(20)
+
+  assert_equal 10, narray.size
+  assert_equal 20, new_array.size
+end
+
 assert 'NArray#slice' do
   narray = NArray.new NArray::Type::INT32, 100, 12
   r1 = narray.slice 1
