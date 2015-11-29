@@ -217,48 +217,48 @@ narray_aset(mrb_state *mrb, mrb_value self)
   NArray *narray = get_narray(mrb, self);
   switch (narray->type) {
     case NARRAY_UINT8: {
-      uint8_t r = mrb_int(mrb, val);
+      uint8_t r = (uint8_t)mrb_int(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
     case NARRAY_UINT16: {
-      uint16_t r = mrb_int(mrb, val);
+      uint16_t r = (uint16_t)mrb_int(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
     case NARRAY_UINT32: {
-      uint32_t r = mrb_int(mrb, val);
+      uint32_t r = (uint32_t)mrb_int(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #if NARRAY_ENABLE_64BIT
     case NARRAY_UINT64: {
-      uint64_t r = mrb_int(mrb, val);
+      uint64_t r = (uint64_t)mrb_int(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #endif
     case NARRAY_INT8: {
-      int8_t r = mrb_int(mrb, val);
+      int8_t r = (int8_t)mrb_int(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
     case NARRAY_INT16: {
-      int16_t r = mrb_int(mrb, val);
+      int16_t r = (int16_t)mrb_int(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
     case NARRAY_INT32: {
-      int32_t r = mrb_int(mrb, val);
+      int32_t r = (int32_t)mrb_int(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #if NARRAY_ENABLE_64BIT
     case NARRAY_INT64: {
-      int64_t r = mrb_int(mrb, val);
+      int64_t r = (int64_t)mrb_int(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #endif
     case NARRAY_FLOAT32: {
-      float32_t r = mrb_to_flo(mrb, val);
+      float32_t r = (float32_t)mrb_to_flo(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #if NARRAY_ENABLE_64BIT
     case NARRAY_FLOAT64: {
-      float64_t r = mrb_to_flo(mrb, val);
+      float64_t r = (float64_t)mrb_to_flo(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #endif
@@ -288,7 +288,8 @@ narray_size(mrb_state *mrb, mrb_value self)
   return mrb_fixnum_value(get_narray(mrb, self)->size);
 }
 
-/* @class NArray
+/**
+ * @class NArray
  * @method memsize
  #   @return [Integer]
  */
@@ -308,7 +309,8 @@ narray_element_size(mrb_state *mrb, mrb_value self)
   return mrb_fixnum_value(get_narray(mrb, self)->element_size);
 }
 
-/* @class NArray
+/**
+ * @class NArray
  * @method slice(start, length)
  *   @param [Integer] start
  *   @param [Integer] length
@@ -332,7 +334,8 @@ narray_slice(mrb_state *mrb, mrb_value self)
   return mrb_nil_value();
 }
 
-/* @class NArray
+/**
+ * @class NArray
  * @method clear
  *   @return [self]
  * Clear does not reset the size, it only fills the Array with 0s
