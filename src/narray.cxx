@@ -99,8 +99,9 @@ bool NArray::Aget(int index, void *target)
 {
 // ERR MA GAWD
 #define SetTheThing(__type__) *((__type__*)target) = ((__type__*)data)[index]
+
   assert(target);
-  if (index < 0 || (int)size < index) {
+  if (index < 0 || (int)size <= index) {
     return false;
   } else {
     switch (type) {
@@ -153,7 +154,7 @@ bool NArray::Aset(int index, void *value)
 {
 #define SetTheData(__type__) ((__type__*)data)[index] = *((__type__*)value)
   assert(value);
-  if (index < 0 || (int)size < index) {
+  if (index < 0 || (int)size <= index) {
     return false;
   } else {
     switch (type) {
