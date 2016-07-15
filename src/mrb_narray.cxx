@@ -8,7 +8,7 @@ static struct RClass *narray_class;
 static struct RClass *narray_type_module;
 
 static void
-narray_free(mrb_state *mrb, void *ptr)
+narray_free(mrb_state* mrb, void* ptr)
 {
   if (ptr) {
     NArray *narray = (NArray*)ptr;
@@ -19,7 +19,7 @@ narray_free(mrb_state *mrb, void *ptr)
 extern "C" const struct mrb_data_type mrb_idnarray_type = { "NArray", narray_free };
 
 static inline void
-narray_cleanup(mrb_state *mrb, mrb_value self)
+narray_cleanup(mrb_state* mrb, mrb_value self)
 {
   if (DATA_PTR(self)) {
     narray_free(mrb, DATA_PTR(self));
@@ -29,13 +29,13 @@ narray_cleanup(mrb_state *mrb, mrb_value self)
 }
 
 static inline NArray*
-get_narray(mrb_state *mrb, mrb_value self)
+get_narray(mrb_state* mrb, mrb_value self)
 {
   return (NArray*)mrb_data_get_ptr(mrb, self, &mrb_idnarray_type);
 }
 
 static bool
-narray_initialize_m(mrb_state *mrb, mrb_value self, enum NArrayContentType type, int size)
+narray_initialize_m(mrb_state* mrb, mrb_value self, enum NArrayContentType type, int size)
 {
   NArray *narray = NULL;
   narray_cleanup(mrb, self);
@@ -60,7 +60,7 @@ narray_initialize_m(mrb_state *mrb, mrb_value self, enum NArrayContentType type,
 /* @return [NArray]
  */
 extern "C" mrb_value
-mrb_narray_value(mrb_state *mrb, NArray *narray)
+mrb_narray_value(mrb_state* mrb, NArray* narray)
 {
   mrb_value argv[2] = {mrb_fixnum_value(NARRAY_INVALID), mrb_fixnum_value(0)};
   mrb_value obj = mrb_obj_new(mrb, narray_class, 2, argv);
@@ -74,7 +74,7 @@ mrb_narray_value(mrb_state *mrb, NArray *narray)
  * @raise TypeError
  */
 extern "C" void
-mrb_narray_check_type(mrb_state *mrb, const NArray *narray, enum NArrayContentType type)
+mrb_narray_check_type(mrb_state* mrb, const NArray *narray, enum NArrayContentType type)
 {
   assert(narray);
   if (narray->type != type) {
@@ -87,7 +87,7 @@ mrb_narray_check_type(mrb_state *mrb, const NArray *narray, enum NArrayContentTy
  * @return [NArray]
  */
 extern "C" mrb_value
-mrb_narray_new(mrb_state *mrb, enum NArrayContentType type, int size)
+mrb_narray_new(mrb_state* mrb, enum NArrayContentType type, int size)
 {
   return mrb_narray_value(mrb, new NArray(type, size));
 }
@@ -98,7 +98,7 @@ mrb_narray_new(mrb_state *mrb, enum NArrayContentType type, int size)
  *   @param [Integer] size
  */
 static mrb_value
-narray_initialize(mrb_state *mrb, mrb_value self)
+narray_initialize(mrb_state* mrb, mrb_value self)
 {
   mrb_int type;
   mrb_int size;
@@ -116,7 +116,7 @@ narray_initialize(mrb_state *mrb, mrb_value self)
  *   @param [NArray]
  */
 static mrb_value
-narray_initialize_copy(mrb_state *mrb, mrb_value self)
+narray_initialize_copy(mrb_state* mrb, mrb_value self)
 {
   NArray *other;
   mrb_get_args(mrb, "d", &other, &mrb_idnarray_type);
@@ -132,7 +132,7 @@ narray_initialize_copy(mrb_state *mrb, mrb_value self)
  *   @return [Numeric, nil]  depends on the internal type, or nil if the type is invalid
  */
 static mrb_value
-narray_aget(mrb_state *mrb, mrb_value self)
+narray_aget(mrb_state* mrb, mrb_value self)
 {
   mrb_int index;
   mrb_get_args(mrb, "i", &index);
@@ -209,7 +209,7 @@ narray_aget(mrb_state *mrb, mrb_value self)
  *   @param [Numeric] value
  */
 static mrb_value
-narray_aset(mrb_state *mrb, mrb_value self)
+narray_aset(mrb_state* mrb, mrb_value self)
 {
   mrb_int index;
   mrb_value val;
@@ -273,7 +273,7 @@ narray_aset(mrb_state *mrb, mrb_value self)
  #   @return [Integer]
  */
 static mrb_value
-narray_type(mrb_state *mrb, mrb_value self)
+narray_type(mrb_state* mrb, mrb_value self)
 {
   return mrb_fixnum_value(get_narray(mrb, self)->type);
 }
@@ -283,7 +283,7 @@ narray_type(mrb_state *mrb, mrb_value self)
  #   @return [Integer]
  */
 static mrb_value
-narray_size(mrb_state *mrb, mrb_value self)
+narray_size(mrb_state* mrb, mrb_value self)
 {
   return mrb_fixnum_value(get_narray(mrb, self)->size);
 }
@@ -294,7 +294,7 @@ narray_size(mrb_state *mrb, mrb_value self)
  #   @return [Integer]
  */
 static mrb_value
-narray_memsize(mrb_state *mrb, mrb_value self)
+narray_memsize(mrb_state* mrb, mrb_value self)
 {
   return mrb_fixnum_value(get_narray(mrb, self)->memsize);
 }
@@ -304,7 +304,7 @@ narray_memsize(mrb_state *mrb, mrb_value self)
  #   @return [Integer]
  */
 static mrb_value
-narray_element_size(mrb_state *mrb, mrb_value self)
+narray_element_size(mrb_state* mrb, mrb_value self)
 {
   return mrb_fixnum_value(get_narray(mrb, self)->element_size);
 }
@@ -317,7 +317,7 @@ narray_element_size(mrb_state *mrb, mrb_value self)
  *   @return [NArray]
  */
 static mrb_value
-narray_slice(mrb_state *mrb, mrb_value self)
+narray_slice(mrb_state* mrb, mrb_value self)
 {
   NArray *narray = get_narray(mrb, self);
   NArray *sliced = NULL;
@@ -341,7 +341,7 @@ narray_slice(mrb_state *mrb, mrb_value self)
  * Clear does not reset the size, it only fills the Array with 0s
  */
 static mrb_value
-narray_clear(mrb_state *mrb, mrb_value self)
+narray_clear(mrb_state* mrb, mrb_value self)
 {
   get_narray(mrb, self)->ClearData();
   return self;
@@ -355,7 +355,7 @@ narray_clear(mrb_state *mrb, mrb_value self)
  * Resizes the internal array, copies any old data to the newly resized data.
  */
 static mrb_value
-narray_resize(mrb_state *mrb, mrb_value self)
+narray_resize(mrb_state* mrb, mrb_value self)
 {
   mrb_int size;
   mrb_get_args(mrb, "i", &size);
@@ -369,7 +369,7 @@ narray_resize(mrb_state *mrb, mrb_value self)
 }
 
 extern "C" void
-mrb_mruby_idnarray_gem_init(mrb_state *mrb)
+mrb_mruby_idnarray_gem_init(mrb_state* mrb)
 {
   narray_class = mrb_define_class(mrb, "NArray", mrb->object_class);
   narray_type_module = mrb_define_module_under(mrb, narray_class, "Type");
@@ -407,6 +407,6 @@ mrb_mruby_idnarray_gem_init(mrb_state *mrb)
 }
 
 extern "C" void
-mrb_mruby_idnarray_gem_final(mrb_state *mrb)
+mrb_mruby_idnarray_gem_final(mrb_state* mrb)
 {
 }
