@@ -19,6 +19,17 @@ class NArray
     end
   end
 
+  # @overload each
+  #   @return [Enumerator]
+  # @overload each { |element| }
+  #   @yieldparam [Numeric] num
+  def each
+    return to_enum :each unless block_given?
+    size.times do |i|
+      yield self[i]
+    end
+  end
+
   alias :slice_raw :slice
   # @overload slice(index)
   #   Retrieves an element from the NArray
@@ -51,15 +62,14 @@ class NArray
 
   alias :[]= :aset
 
-  # @overload each
-  #   @return [Enumerator]
-  # @overload each { |element| }
-  #   @yieldparam [Numeric] num
-  def each
-    return to_enum :each unless block_given?
-    size.times do |i|
-      yield self[i]
+  # @yieldparam [Numeric] value
+  # @yieldreturn [Numeric] new_value
+  # @return [self]
+  def map!
+    each_with_index do |value, index|
+      self.aset(index, yield(value))
     end
+    self
   end
 
   # Converts the NArray to a ruby Array
@@ -77,6 +87,15 @@ class NArray
   # @return [NArray]
   def resize(size)
     dup.resize!(size)
+  end
+
+  # Sets all data in the NArray as the value
+  #
+  # @param [Integer]
+  # @return [self]
+  def fill(value)
+    map! { |_| value }
+    self
   end
 
   class << self
