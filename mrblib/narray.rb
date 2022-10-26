@@ -98,14 +98,61 @@ class NArray
     self
   end
 
-  class << self
-    # generates helper methods based on the types available
-    Type.constants.each do |constname|
-      name = constname.to_s.downcase
-      type = Type.const_get(constname)
-      define_method name do |size, *args, &block|
-        new(type, size, *args, &block)
-      end
+  def self.uint8(size, *args, &block)
+    new(Type::UINT8, size, *args, &block)
+  end
+
+  def self.uint16(size, *args, &block)
+    new(Type::UINT16, size, *args, &block)
+  end
+
+  def self.uint32(size, *args, &block)
+    new(Type::UINT32, size, *args, &block)
+  end
+
+  if Type.const_defined?(:UINT64)
+    def self.uint64(size, *args, &block)
+      new(Type::UINT64, size, *args, &block)
     end
   end
+
+  def self.int8(size, *args, &block)
+    new(Type::INT8, size, *args, &block)
+  end
+
+  def self.int16(size, *args, &block)
+    new(Type::INT16, size, *args, &block)
+  end
+
+  def self.int32(size, *args, &block)
+    new(Type::INT32, size, *args, &block)
+  end
+
+  if Type.const_defined?(:INT64)
+    def self.int64(size, *args, &block)
+      new(Type::INT64, size, *args, &block)
+    end
+  end
+
+  def self.float32(size, *args, &block)
+    new(Type::FLOAT32, size, *args, &block)
+  end
+
+  if Type.const_defined?(:FLOAT64)
+    def self.float64(size, *args, &block)
+      new(Type::FLOAT64, size, *args, &block)
+    end
+  end
+
+  # It's broken on newer mruby
+  # # generates shorthand methods based on the types available
+  # class << self
+  #   NArray::Type.constants.each do |constname|
+  #     method_name = constname.to_s.downcase
+  #     type = Type.const_get(constname)
+  #     define_method method_name do |size, *args, &block|
+  #       new(type, size, *args, &block)
+  #     end
+  #   end
+  # end
 end

@@ -111,7 +111,7 @@ assert 'NArray#slice' do
   end
 end
 
-assert 'NArray convience methods' do
+assert 'NArray shorthand class methods' do
   n1 = NArray.uint8(32)
   n2 = NArray.uint16(32)
   n3 = NArray.uint32(32)

@@ -1,9 +1,9 @@
-#include <cassert>
 #include <mruby.h>
 #include <mruby/class.h>
 #include <mruby/data.h>
 #include <mruby/numeric.h>
-#include "mrb/idnarray/narray.hxx"
+#include <stdbool.h>
+#include "mrb/idnarray/narray.h"
 
 static struct RClass *narray_class;
 static struct RClass *narray_type_module;
@@ -12,12 +12,12 @@ static void
 narray_free(mrb_state* mrb, void* ptr)
 {
   if (ptr) {
-    NArray *narray = (NArray*)ptr;
-    delete narray;
+    struct NArray *narray = (struct NArray*)ptr;
+    idnarray_free(narray);
   }
 }
 
-extern "C" const struct mrb_data_type mrb_idnarray_type = { "NArray", narray_free };
+MRB_IDNARRAY_EXTERN const struct mrb_data_type mrb_idnarray_type = { "NArray", narray_free };
 
 static inline void
 narray_cleanup(mrb_state* mrb, mrb_value self)
@@ -29,16 +29,16 @@ narray_cleanup(mrb_state* mrb, mrb_value self)
   }
 }
 
-static inline NArray*
+static inline struct NArray*
 get_narray(mrb_state* mrb, mrb_value self)
 {
-  return (NArray*)mrb_data_get_ptr(mrb, self, &mrb_idnarray_type);
+  return (struct NArray*)mrb_data_get_ptr(mrb, self, &mrb_idnarray_type);
 }
 
 static bool
 narray_initialize_m(mrb_state* mrb, mrb_value self, enum NArrayContentType type, int size)
 {
-  NArray *narray = NULL;
+  struct NArray *narray = NULL;
   narray_cleanup(mrb, self);
   if (size < 0) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "given size is too small");
@@ -52,16 +52,19 @@ narray_initialize_m(mrb_state* mrb, mrb_value self, enum NArrayContentType type,
     return false;
   }
 
-  narray = new NArray((enum NArrayContentType)type, size);
-  mrb_data_init(self, narray, &mrb_idnarray_type);
+  narray = idnarray_new((enum NArrayContentType)type, size);
+  if (narray) {
+    mrb_data_init(self, narray, &mrb_idnarray_type);
+    return true;
+  }
 
-  return true;
+  return false;
 }
 
 /* @return [NArray]
  */
-extern "C" mrb_value
-mrb_narray_value(mrb_state* mrb, NArray* narray)
+MRB_IDNARRAY_EXTERN mrb_value
+mrb_narray_value(mrb_state* mrb, struct NArray* narray)
 {
   mrb_value argv[2] = {mrb_fixnum_value(NARRAY_INVALID), mrb_fixnum_value(0)};
   mrb_value obj = mrb_obj_new(mrb, narray_class, 2, argv);
@@ -74,8 +77,8 @@ mrb_narray_value(mrb_state* mrb, NArray* narray)
  * Checks if the NArray type is the one that is expected.
  * @raise TypeError
  */
-extern "C" void
-mrb_narray_check_type(mrb_state* mrb, const NArray *narray, enum NArrayContentType type)
+MRB_IDNARRAY_EXTERN void
+mrb_narray_check_type(mrb_state* mrb, struct NArray *narray, enum NArrayContentType type)
 {
   assert(narray);
   if (narray->type != type) {
@@ -87,10 +90,10 @@ mrb_narray_check_type(mrb_state* mrb, const NArray *narray, enum NArrayContentTy
 /* Creates a new mruby NArray.
  * @return [NArray]
  */
-extern "C" mrb_value
-mrb_narray_new(mrb_state* mrb, enum NArrayContentType type, int size)
+MRB_IDNARRAY_EXTERN mrb_value
+mrb_narray_new(mrb_state* mrb, enum NArrayContentType type, size_t size)
 {
-  return mrb_narray_value(mrb, new NArray(type, size));
+  return mrb_narray_value(mrb, idnarray_new(type, size));
 }
 
 /* @class NArray
@@ -103,11 +106,15 @@ narray_initialize(mrb_state* mrb, mrb_value self)
 {
   mrb_int type;
   mrb_int size;
+  struct NArray* narray;
   mrb_get_args(mrb, "ii", &type, &size);
   if (narray_initialize_m(mrb, self, (enum NArrayContentType)type, size)) {
-    // new Narrays are always dirty, this is to avoid clearing an Array which
+    // new NArrays are always dirty, this is to avoid clearing an Array which
     // will have its data replaced immediately.
-    get_narray(mrb, self)->ClearData();
+    narray = get_narray(mrb, self);
+    if (narray) {
+      idnarray_clear(narray);
+    }
   }
   return self;
 }
@@ -119,14 +126,18 @@ narray_initialize(mrb_state* mrb, mrb_value self)
 static mrb_value
 narray_initialize_copy(mrb_state* mrb, mrb_value self)
 {
-  NArray *other;
+  struct NArray *other;
+  struct NArray *narray;
   mrb_get_args(mrb, "d", &other, &mrb_idnarray_type);
   narray_cleanup(mrb, self);
-  mrb_data_init(self, other->Copy(), &mrb_idnarray_type);
+  narray = idnarray_new(other->type, other->size);
+  assert(idnarray_slice(other, narray, 0, other->size) == IDNARRAY_OK);
+  mrb_data_init(self, narray, &mrb_idnarray_type);
   return self;
 }
 
-#define MAYBE_RETURN_NIL(__statement__) if (!(__statement__)) return mrb_nil_value()
+#define MAYBE_RETURN_NIL(__statement__) if ((__statement__) != IDNARRAY_OK) return mrb_nil_value()
+
 /* @class NArray
  * @method aget(index)
  *   @param [Integer] index
@@ -137,65 +148,66 @@ narray_aget(mrb_state* mrb, mrb_value self)
 {
   mrb_int index;
   mrb_get_args(mrb, "i", &index);
-  NArray *narray = get_narray(mrb, self);
+  struct NArray *narray = get_narray(mrb, self);
+
   switch (narray->type) {
     case NARRAY_INVALID: {
       return mrb_nil_value();
     }
     case NARRAY_UINT8: {
       uint8_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
       return mrb_fixnum_value((mrb_int)r);
     }
     case NARRAY_UINT16: {
       uint16_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
       return mrb_fixnum_value((mrb_int)r);
     }
     case NARRAY_UINT32: {
       uint32_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
       return mrb_fixnum_value((mrb_int)r);
     }
 #if NARRAY_ENABLE_64BIT
     case NARRAY_UINT64: {
       uint64_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
       return mrb_fixnum_value((mrb_int)r);
     }
 #endif
     case NARRAY_INT8: {
       int8_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
       return mrb_fixnum_value((mrb_int)r);
     }
     case NARRAY_INT16: {
       int16_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
       return mrb_fixnum_value((mrb_int)r);
     }
     case NARRAY_INT32: {
       int32_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
       return mrb_fixnum_value((mrb_int)r);
     }
 #if NARRAY_ENABLE_64BIT
     case NARRAY_INT64: {
       int64_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
       return mrb_fixnum_value((mrb_int)r);
     }
 #endif
     case NARRAY_FLOAT32: {
       float32_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
-      return mrb_float_value(mrb, r);
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
+      return mrb_float_value(mrb, (mrb_float)r);
     }
 #if NARRAY_ENABLE_64BIT
     case NARRAY_FLOAT64: {
       float64_t r;
-      MAYBE_RETURN_NIL(narray->Aget(index, &r));
-      return mrb_float_value(mrb, r);
+      MAYBE_RETURN_NIL(idnarray_aget(narray, index, &r));
+      return mrb_float_value(mrb, (mrb_float)r);
     }
 #endif
     default: {
@@ -215,52 +227,53 @@ narray_aset(mrb_state* mrb, mrb_value self)
   mrb_int index;
   mrb_value val;
   mrb_get_args(mrb, "io", &index, &val);
-  NArray *narray = get_narray(mrb, self);
+  struct NArray *narray = get_narray(mrb, self);
+
   switch (narray->type) {
     case NARRAY_UINT8: {
       uint8_t r = (uint8_t)mrb_int(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
     case NARRAY_UINT16: {
       uint16_t r = (uint16_t)mrb_int(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
     case NARRAY_UINT32: {
       uint32_t r = (uint32_t)mrb_int(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
 #if NARRAY_ENABLE_64BIT
     case NARRAY_UINT64: {
       uint64_t r = (uint64_t)mrb_int(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
 #endif
     case NARRAY_INT8: {
       int8_t r = (int8_t)mrb_int(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
     case NARRAY_INT16: {
       int16_t r = (int16_t)mrb_int(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
     case NARRAY_INT32: {
       int32_t r = (int32_t)mrb_int(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
 #if NARRAY_ENABLE_64BIT
     case NARRAY_INT64: {
       int64_t r = (int64_t)mrb_int(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
 #endif
     case NARRAY_FLOAT32: {
       float32_t r = (float32_t)mrb_as_float(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
 #if NARRAY_ENABLE_64BIT
     case NARRAY_FLOAT64: {
       float64_t r = (float64_t)mrb_as_float(mrb, val);
-      MAYBE_RETURN_NIL(narray->Aset(index, &r));
+      MAYBE_RETURN_NIL(idnarray_aset(narray, index, &r));
     } break;
 #endif
     default: {
@@ -320,17 +333,24 @@ narray_element_size(mrb_state* mrb, mrb_value self)
 static mrb_value
 narray_slice(mrb_state* mrb, mrb_value self)
 {
-  NArray *narray = get_narray(mrb, self);
-  NArray *sliced = NULL;
+  struct NArray *narray = get_narray(mrb, self);
+  struct NArray *sliced = NULL;
   mrb_int start;
   mrb_int length;
   mrb_get_args(mrb, "ii", &start, &length);
-  sliced = narray->Slice(start, length);
-  if (sliced) {
+  if (length < 0) {
+    // TODO: should raise an exception
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "slice failed, length must be positive integer.");
+  }
+  sliced = idnarray_new(narray->type, length);
+  int status = idnarray_slice(narray, sliced, start, length);
+  if (status == IDNARRAY_OK) {
     return mrb_narray_value(mrb, sliced);
   } else {
+    idnarray_free(sliced);
     mrb_raise(mrb, E_RUNTIME_ERROR, "slice failed, start and or length out of bounds.");
   }
+
   // not suppose to reach here.
   return mrb_nil_value();
 }
@@ -344,7 +364,8 @@ narray_slice(mrb_state* mrb, mrb_value self)
 static mrb_value
 narray_clear(mrb_state* mrb, mrb_value self)
 {
-  get_narray(mrb, self)->ClearData();
+  struct NArray* narray = get_narray(mrb, self);
+  idnarray_clear(narray);
   return self;
 }
 
@@ -359,17 +380,27 @@ static mrb_value
 narray_resize(mrb_state* mrb, mrb_value self)
 {
   mrb_int size;
+  struct NArray* narray;
+  int status;
+
   mrb_get_args(mrb, "i", &size);
   if (size <= 0)
   {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "Invalid size!");
     return mrb_nil_value();
   }
-  get_narray(mrb, self)->Resize(size);
+
+  narray = get_narray(mrb, self);
+  status = idnarray_resize(narray, size);
+
+  if (status != IDNARRAY_OK) {
+    mrb_raise(mrb, E_RUNTIME_ERROR, "Resize has failed");
+  }
+
   return self;
 }
 
-extern "C" void
+MRB_IDNARRAY_EXTERN void
 mrb_mruby_idnarray_gem_init(mrb_state* mrb)
 {
   narray_class = mrb_define_class(mrb, "NArray", mrb->object_class);
@@ -407,7 +438,7 @@ mrb_mruby_idnarray_gem_init(mrb_state* mrb)
 #endif
 }
 
-extern "C" void
+MRB_IDNARRAY_EXTERN void
 mrb_mruby_idnarray_gem_final(mrb_state* mrb)
 {
 }

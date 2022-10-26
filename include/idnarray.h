@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 
+#define MRB_IDNARRAY_EXTERN extern
+
 #ifndef NARRAY_ENABLE_64BIT
 #  define NARRAY_ENABLE_64BIT 0
 #endif
@@ -39,28 +41,30 @@ enum NArrayContentType {
 };
 
 struct NArray {
-public:
   enum NArrayContentType type; // type of content
   size_t size;                 // number of elements in the Array
   size_t element_size;         // size of 1 element in the array
   size_t memsize;              // actually allocated size
   void *data;                  // pointer to the data
-
-  static size_t CalcContentTypeSize(enum NArrayContentType type);
-
-  NArray(enum NArrayContentType _type, int _size);
-  ~NArray();
-
-  bool Aget(int index, void *target);
-  bool Aset(int index, void *val);
-  void Resize(size_t newsize);
-  NArray* Slice(int start, int length);
-  NArray* Copy();
-  bool ClearData();
-private:
-  bool AllocData();
-  bool FreeData();
-  void RecalculateSizes();
 };
+
+#define IDNARRAY_OK 0
+#define IDNARRAY_NO_DATA 1
+#define IDNARRAY_OUT_OF_MEMORY 2
+#define IDNARRAY_SOURCE_OUT_OF_RANGE 3
+#define IDNARRAY_DESTINATION_OUT_OF_RANGE 4
+#define IDNARRAY_INVALID_TYPE 5
+
+size_t idnarray_calc_content_type_size(enum NArrayContentType type);
+struct NArray* idnarray_alloc();
+int idnarray_init(struct NArray* narray, enum NArrayContentType type, size_t size);
+struct NArray* idnarray_new(enum NArrayContentType type, size_t size);
+int idnarray_free(struct NArray* narray);
+int idnarray_aget(struct NArray* narray, size_t index, void *target);
+int idnarray_aset(struct NArray* narray, size_t index, void *val);
+int idnarray_resize(struct NArray* narray, size_t newsize);
+int idnarray_slice(struct NArray* source_narray, struct NArray* dest_narray, size_t start, size_t length);
+// struct NArray* idnarray_copy(struct NArray* narray); // just use slice
+int idnarray_clear(struct NArray* narray);
 
 #endif
