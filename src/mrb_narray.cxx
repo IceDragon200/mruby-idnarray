@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include <mruby.h>
 #include <mruby/class.h>
 #include <mruby/data.h>
