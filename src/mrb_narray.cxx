@@ -254,12 +254,12 @@ narray_aset(mrb_state* mrb, mrb_value self)
     } break;
 #endif
     case NARRAY_FLOAT32: {
-      float32_t r = (float32_t)mrb_float(val);
+      float32_t r = (float32_t)mrb_to_float(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #if NARRAY_ENABLE_64BIT
     case NARRAY_FLOAT64: {
-      float64_t r = (float64_t)mrb_float(val);
+      float64_t r = (float64_t)mrb_to_float(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #endif
