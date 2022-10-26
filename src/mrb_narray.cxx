@@ -189,13 +189,13 @@ narray_aget(mrb_state* mrb, mrb_value self)
     case NARRAY_FLOAT32: {
       float32_t r;
       MAYBE_RETURN_NIL(narray->Aget(index, &r));
-      return mrb_float_value(mrb, (mrb_float)r);
+      return mrb_float_value(mrb, r);
     }
 #if NARRAY_ENABLE_64BIT
     case NARRAY_FLOAT64: {
       float64_t r;
       MAYBE_RETURN_NIL(narray->Aget(index, &r));
-      return mrb_float_value(mrb, (mrb_float)r);
+      return mrb_float_value(mrb, r);
     }
 #endif
     default: {
@@ -254,12 +254,12 @@ narray_aset(mrb_state* mrb, mrb_value self)
     } break;
 #endif
     case NARRAY_FLOAT32: {
-      float32_t r = (float32_t)mrb_to_flo(mrb, val);
+      float32_t r = (float32_t)mrb_as_float(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #if NARRAY_ENABLE_64BIT
     case NARRAY_FLOAT64: {
-      float64_t r = (float64_t)mrb_to_flo(mrb, val);
+      float64_t r = (float64_t)mrb_as_float(mrb, val);
       MAYBE_RETURN_NIL(narray->Aset(index, &r));
     } break;
 #endif
